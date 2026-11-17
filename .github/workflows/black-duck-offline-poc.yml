@@ -1,1 +1,84 @@
 
+name: Black Duck Offline Python POC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  offline-scan:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Java on GitHub runner
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install project dependencies
+        run: |
+          python -m venv "$RUNNER_TEMP/project-venv"
+          source "$RUNNER_TEMP/project-venv/bin/activate"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip list
+
+      - name: Download Black Duck Detect Air Gap package
+        run: |
+          mkdir -p "$RUNNER_TEMP/detect-airgap"
+
+          curl -fL --retry 3 \
+            -o "$RUNNER_TEMP/detect-airgap.zip" \
+            https://repo.blackduck.com/bds-integrations-release/com/blackduck/integration/detect/12.1.1/detect-12.1.1-air-gap-no-docker.zip
+
+          unzip -q "$RUNNER_TEMP/detect-airgap.zip" \
+            -d "$RUNNER_TEMP/detect-airgap"
+
+      - name: Run Black Duck Detect offline
+        run: |
+          source "$RUNNER_TEMP/project-venv/bin/activate"
+
+          DETECT_JAR=$(find "$RUNNER_TEMP/detect-airgap" \
+            -type f -name "detect-12.1.1.jar" -print -quit)
+
+          if [ -z "$DETECT_JAR" ]; then
+            echo "Detect JAR was not found in the archive."
+            exit 1
+          fi
+
+          mkdir -p "$GITHUB_WORKSPACE/detect-output"
+
+          java -jar "$DETECT_JAR" \
+            --blackduck.offline.mode=true \
+            --detect.source.path="$GITHUB_WORKSPACE" \
+            --detect.output.path="$GITHUB_WORKSPACE/detect-output" \
+            --detect.cleanup=false \
+            --detect.pip.path="$RUNNER_TEMP/project-venv/bin/pip" \
+            --detect.python.path="$RUNNER_TEMP/project-venv/bin/python" \
+            --detect.pip.requirements.path="$GITHUB_WORKSPACE/requirements.txt"
+
+      - name: Display generated scan files
+        if: always()
+        run: |
+          echo "Generated Detect output:"
+          find detect-output -type f || true
+
+      - name: Upload BDIO scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: black-duck-offline-bdio
+          path: detect-output/**
+          if-no-files-found: error
+          retention-days: 7
