@@ -1,0 +1,77 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FastAPI CORS Demo</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #2563eb;
+        }
+
+        button {
+            padding: 12px 25px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #result {
+            margin-top: 25px;
+            font-size: 18px;
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>FastAPI CORS Demo</h1>
+
+    <p>Click below to connect with FastAPI</p>
+
+    <button onclick="connectBackend()">
+        Connect to FastAPI
+    </button>
+
+    <div id="result"></div>
+
+    <script>
+        async function connectBackend() {
+
+            const result = document.getElementById("result");
+
+            try {
+                const response = await fetch(
+                    "http://127.0.0.1:8000/",
+                    {
+                        method: "GET"
+                    }
+                );
+
+                const data = await response.json();
+
+                result.innerHTML =
+                    "Backend Response: " + data.message;
+
+            } catch (error) {
+
+                result.innerHTML =
+                    "Error: " + error.message;
+
+            }
+        }
+    </script>
+
+</body>
+</html>
