@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+python-jose
+passlib
+python-dotenv
+requests
+pytest
+httpx
+python-multipart
